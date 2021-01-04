@@ -22,6 +22,3 @@ With two optional parameters : learningrate (double) and iterations (integer)
 It gives predictions like this:
 nn.predict( [ inputForFirstNeuronInInputLayer, inputForSecondNeuronInInputLayer, ... ] )
 which returns a list of outputs containing the output for every output neuron
-
-Bugs:
-Currently the network can not be initialized without hidden layers
