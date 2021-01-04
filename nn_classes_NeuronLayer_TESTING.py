@@ -31,8 +31,10 @@ class NeuronLayer():
     def __init__(self, amountOfInputs, amountOfNeurons):
         self.neurons = [Neuron(amountOfInputs) for i in range(amountOfNeurons)]
         self.weight_d = [[[] for j in range(amountOfInputs)] for i in range(len(self.neurons))]
+        self.lastinputs = None
 
     def calculateOutput( self , inputs):
+        self.lastinputs = inputs
         outputs = []
         for neuron in self.neurons:
             outputs.append(neuron.calculateOutput(inputs))
@@ -61,6 +63,9 @@ class NeuronLayer():
                 res[-1].append(self.getNeruonAtIndex(neuronIndex).getWeightAtIndex(weightIndex))
         return res
 
+    def getLastInputs( self ):
+        return self.lastinputs
+
 
 class NeuralNetwork():
     def __init__(self, amountOfInputs, hiddenlayers, outputlayerNeurons):
@@ -81,7 +86,7 @@ class NeuralNetwork():
     def train( self , inputs, outputs, learningrate=0.5, iterations=100000):
         for j in range(iterations):
             hl_weight_deltas = [[[[] for index2 in range(hiddenlayer.getNeruonAtIndex(index).getTotalNumberOfWeights())] for index in range(hiddenlayer.getTotalNumberOfNeurons())] for hiddenlayer in self.hidden]
-            ol_weight_deltas = [[[] for index2 in range(self.outputlayer.getNeruonAtIndex(index).getTotalNumberOfWeights())] for index in range(self.outputlayer.getTotalNumberOfNeurons())] # [[[], []], [[], []]]
+            ol_weight_deltas = [[[] for index2 in range(self.outputlayer.getNeruonAtIndex(index).getTotalNumberOfWeights())] for index in range(self.outputlayer.getTotalNumberOfNeurons())]
             for i in range(len(inputs)):
                 # forward pass
                 out_h = []
@@ -89,6 +94,8 @@ class NeuralNetwork():
                 for hiddenlayer in self.hidden:
                     out_h.append(hiddenlayer.calculateOutput(lastoutput))
                     lastoutput = out_h[-1]
+                if out_h == []:
+                    out_h = [inputs[i]]
                 out_o = self.outputlayer.calculateOutput(lastoutput)
 
                 error = [outputs[i][neuronIndex] - out_o[neuronIndex] for neuronIndex in range(self.outputlayer.getTotalNumberOfNeurons())]
@@ -116,7 +123,7 @@ class NeuralNetwork():
                         for weightIndex in range( len( h_deltas[ h_neuronIndex ] ) ):
                             h_deltas[ h_neuronIndex ][ weightIndex ] = tempSum * sigmoid_d( out_h[hiddenlayerIndex][ h_neuronIndex ] )
                             hl_weight_deltas[hiddenlayerIndex][ h_neuronIndex ][ weightIndex ].append(
-                                h_deltas[ h_neuronIndex ][ weightIndex ] * inputs[ i ][ weightIndex ] * learningrate )
+                                h_deltas[ h_neuronIndex ][ weightIndex ] * self.hidden[hiddenlayerIndex].getLastInputs()[ weightIndex ] * learningrate )
                     beforeLayer = self.hidden[hiddenlayerIndex]
                     beforeDeltas = h_deltas
 
@@ -138,7 +145,6 @@ if __name__ == '__main__':
     target = [[0, 1], [1, 0], [1, 0], [0, 1]]
 
     n = NeuralNetwork(2, [2], 2)
-    print(n.predict(input[0]))
     n.train(input, target)
     print('')
     for i in input:
