@@ -7,10 +7,11 @@ def sigmoid_d( x ):
 class Neuron():
     def __init__(self, amountOfInputs, bias):
         self.weights = [random() for i in range(amountOfInputs)]
+        self.weight_bias = random()
         self.bias = bias
 
     def calculateOutput( self , inputs):
-        res = 0 + self.bias
+        res = 0 + self.bias * self.weight_bias  # = self.weight_bias
         for i in range(len(inputs)):
             res += inputs[i] * self.weights[i]
         return self.sigmoid(res)
@@ -24,12 +25,15 @@ class Neuron():
     def adjustWeightAtIndex( self , index, delta):
         self.weights[index] += delta
 
+    def adjustBiasWeight( self , delta):
+        self.weight_bias += delta
+
     def getTotalNumberOfWeights( self ):
         return len(self.weights)
 
 class NeuronLayer():
     def __init__(self, amountOfInputs, amountOfNeurons):
-        self.bias = 0#random()
+        self.bias = 1
         self.neurons = [Neuron(amountOfInputs, self.bias) for i in range(amountOfNeurons)]
         self.weight_d = [[[] for j in range(amountOfInputs)] for i in range(len(self.neurons))]
         self.lastinputs = None
@@ -120,6 +124,13 @@ class NeuralNetwork():
                         o_deltas[ neuronIndex ].append( error[ neuronIndex ] * sigmoid_d( out_o[ neuronIndex ] ) )
                         # ∂e/∂w = ∂e/∂z * ∂z/∂w ( * learningrate )
                         ol_weight_deltas[neuronIndex][weightIndex].append(o_deltas[neuronIndex][weightIndex] * out_h[-1][weightIndex] * learningrate)
+                    # the bias weight is updated like this:
+                    # ∂e/∂b = ∂e/∂a * ∂a/∂z * ∂z/∂b ( * learningrate )
+                    #       = ∂e/∂z * ∂z/∂b ( * learningrate )
+                    #       = ∂e/∂z ( * learningrate )  | since "∂z/∂b" is always 1
+                    # and it is updated instantly, because it isn't used anymore
+                    # in further calculations
+                    self.outputlayer.getNeruonAtIndex(neuronIndex).adjustBiasWeight(o_deltas[neuronIndex][0] * 1 * learningrate)
 
                 # calculate the deltas for the hidden layers
                 # ∂e/∂w = ∂e/∂a_h * ∂a/∂z * ∂z/∂w ( * learningrate )
@@ -135,7 +146,7 @@ class NeuralNetwork():
                         # ∂e/∂a_o1 = ∂e/a_o1 * ∂a_o1/∂z_o1 * ∂z_o1/∂a_h
                         #           |_____________________|     ||
                         #                      \/               ||
-                        # this was computed before (comment in line 119 [1]) so we can just reuse it
+                        # this was computed before (comment in line 124 [1]) so we can just reuse it
                         #                                       ||
                         #                                       \/
                         # and this is just the weight connecting that previous
@@ -149,6 +160,8 @@ class NeuralNetwork():
                             h_deltas[ h_neuronIndex ][ weightIndex ] = tempSum * sigmoid_d( out_h[hiddenlayerIndex][ h_neuronIndex ] )
                             # ∂e/∂w = ∂e/∂z * ∂z/∂w ( * learningrate )
                             hl_weight_deltas[hiddenlayerIndex][ h_neuronIndex ][ weightIndex ].append(h_deltas[ h_neuronIndex ][ weightIndex ] * self.hidden[hiddenlayerIndex].getLastInputs()[ weightIndex ] * learningrate )
+                        # ∂e/∂b = ∂e/∂a * ∂a/∂z * ∂z/∂b ( * learningrate )
+                        self.hidden[hiddenlayerIndex].getNeruonAtIndex(h_neuronIndex).adjustBiasWeight(h_deltas[h_neuronIndex][0] * 1 * learningrate)
                     beforeLayer = self.hidden[hiddenlayerIndex]
                     beforeDeltas = h_deltas
 
@@ -175,5 +188,3 @@ if __name__ == '__main__':
     print('')
     for i in input:
         print(n.predict(i))
-
-    print(n.getWeights())
